@@ -1,29 +1,29 @@
 # SFM-DETR
 
-**Semantic-Conditioned Wavelet Selection and Morphology-Aware Fusion for Wind-Turbine Blade Defect Detection**
+**Wavelet-Guided Fusion for Wind Turbine Blade Defect Detection**
 
-本仓库提供论文定稿对应的 SFM-DETR 实现、训练配置、数据检查脚本和定稿实验图件。代码基于 RT-DETRv2 的 PyTorch 实现，并保留上游 Apache License 2.0 声明。
+This repository provides the SFM-DETR implementation, training configurations, dataset validation scripts, and experimental figures accompanying the manuscript. The code builds on the PyTorch implementation of RT-DETRv2 and retains the upstream Apache License 2.0 notices.
 
-## 核心创新
+## Key Contributions
 
-1. **共享语义—频率—形态耦合。** SCWA 产生的四子带偏好 `D_l` 同时用于细节选择和粗尺度上下文采样，使两条特征路径具有一致的选择依据。
-2. **SCWA（Semantic-Conditioned Wavelet Attention）。** 在同分辨率的四个 Haar 子带及其 3×3 邻域上执行语义条件注意力，保留带符号的高频响应并输出可解释的四通道偏好。
-3. **MFA-Neck（Morphology-aware Frequency-guided Attention）。** 使用 `D_l` 生成采样偏置和注意力偏置，通过受约束的平移、旋转和各向异性尺度完成跨尺度融合。
+1. **Coupled semantic, frequency, and morphological modeling.** The four-subband preference `D_l` produced by SCWA guides both detail selection and coarse-scale context sampling, connecting the two feature paths through a shared selection signal.
+2. **Semantic-Conditioned Wavelet Attention (SCWA).** Semantic-conditioned attention operates jointly over four same-resolution Haar subbands and their 3 × 3 neighborhoods, preserving signed high-frequency responses and producing an interpretable four-channel preference.
+3. **Morphology-aware Frequency-guided Attention Neck (MFA-Neck).** The shared preference `D_l` conditions sampling and attention biases. Bounded translation, rotation, and anisotropic scaling adapt the sampling geometry for cross-scale feature fusion.
 
-## 目录
+## Repository Structure
 
 ```text
-src/                 SFM-DETR 与 RT-DETRv2 运行时代码
-configs/sfm_detr/    WTBD/WTBs2025 的 full 与消融模板
-tools/train.py       训练与验证入口
-tools/prepare_config.py  将模板写成可运行配置
-tools/validate_coco.py   COCO 数据检查
-assets/              结构图、曲线、定性结果和困难样本
-results/             定稿 Table 2 的三次运行汇总
-docs/DATASETS.md     数据下载与目录说明
+src/                     SFM-DETR and RT-DETRv2 implementation
+configs/sfm_detr/        Full-model and ablation templates for WTBD and WTBs2025
+tools/train.py           Training and evaluation entry point
+tools/prepare_config.py  Generate runnable configurations from templates
+tools/validate_coco.py   Validate COCO-format datasets
+assets/                  Architecture, training curves, and qualitative comparisons
+results/                 Three-run results reported in manuscript Table 2
+docs/DATASETS.md          Dataset download links and directory structure
 ```
 
-## 环境
+## Installation
 
 ```bash
 python -m venv .venv
@@ -32,26 +32,26 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-训练需要 PyTorch 2.x、torchvision、CUDA 和 COCO 评估依赖；`requirements-deploy.txt` 仅用于 ONNX 导出/部署。建议使用 NVIDIA GPU。
+Training requires PyTorch 2.x, torchvision, CUDA, and COCO evaluation dependencies. An NVIDIA GPU is recommended. The optional `requirements-deploy.txt` file contains dependencies for ONNX export and deployment.
 
-## 数据准备
+## Datasets
 
-数据集下载链接如下，点击进入 Figshare 数据发布页面后下载文件：
+Download the datasets from their Figshare release pages using the links below:
 
-| 数据集 | 下载链接 | DOI |
+| Dataset | Download | DOI |
 |---|---|---|
-| WTBD | [WTBD 数据集下载](https://doi.org/10.6084/m9.figshare.30210175.v1) | `10.6084/m9.figshare.30210175.v1` |
-| WTBs2025 | [WTBs2025 数据集下载](https://doi.org/10.6084/m9.figshare.28876391.v1) | `10.6084/m9.figshare.28876391.v1` |
+| WTBD | [Download WTBD](https://doi.org/10.6084/m9.figshare.30210175.v1) | `10.6084/m9.figshare.30210175.v1` |
+| WTBs2025 | [Download WTBs2025](https://doi.org/10.6084/m9.figshare.28876391.v1) | `10.6084/m9.figshare.28876391.v1` |
 
-下载后需按本项目的 COCO 目录要求准备数据，详见 [docs/DATASETS.md](docs/DATASETS.md)。原始数据不包含在仓库中。准备后先运行：
+After downloading, arrange the datasets in the COCO directory structure described in [the dataset preparation guide](docs/DATASETS.md). Dataset files are not included in this repository. Validate the prepared dataset before training:
 
 ```bash
 python tools/validate_coco.py /path/to/WTBD/coco
 ```
 
-## 训练
+## Training
 
-先用模板生成本机配置。模板中的 `__DATA_ROOT_WTBD__` 或 `__DATA_ROOT_WTBS2025__` 会被替换为你提供的数据目录：
+Generate a local configuration from a template. The script replaces `__DATA_ROOT_WTBD__` or `__DATA_ROOT_WTBS2025__` with the dataset directory you provide:
 
 ```bash
 python tools/prepare_config.py \
@@ -64,22 +64,21 @@ python tools/train.py -c configs/local_wtbd_full.yml \
   --use-amp
 ```
 
-将 `wtbd` 替换为 `wtbs2025`、将模板替换为 `wtbs2025_full_r18_100e.yml.template` 即可训练第二个数据集。`baseline`、`scwa_only` 和 `mfa_only` 模板用于消融。中断后使用 `-r runs/.../last.pth` 恢复同一配置。
+To train on WTBs2025, use `wtbs2025_full_r18_100e.yml.template` and update the dataset, configuration, and output paths accordingly. The `baseline`, `scwa_only`, and `mfa_only` templates support component ablations. To resume an interrupted run, use the same configuration with `-r runs/.../last.pth`.
 
-COCO 预训练权重可从 RT-DETRv2 官方发布页获得：
-<https://github.com/lyuwenyu/RT-DETR>。本仓库不打包权重文件。
+COCO-pretrained weights are available from the [official RT-DETR repository](https://github.com/lyuwenyu/RT-DETR). Model weights are not included in this repository.
 
-验证已有 checkpoint：
+Evaluate an existing checkpoint:
 
 ```bash
 python tools/train.py -c configs/local_wtbd_full.yml -r runs/wtbd_full/last.pth --test-only
 ```
 
-训练日志默认写入配置中的 `output_dir`；训练阶段可使用 EMA 进行验证，论文中的受控消融端点使用 raw epoch-100 权重。
+Training logs are saved to the configured `output_dir`. EMA weights can be used for validation during training; the controlled ablation endpoints reported in the manuscript use raw weights from epoch 100.
 
-## 定稿结果
+## Benchmark Results
 
-表中 P/R/AP50/AP 为三个独立运行的均值 ± 样本标准差。AP50 是 IoU=0.50 下按类别平均的 COCO AP，也就是通常所称的 mAP50；AP 是 IoU 0.50:0.05:0.95 的平均 AP。DETR 的 P/R 使用 IoU=0.50 插值 PR 曲线的最大 F1 工作点，YOLO 保留其原生定义。
+Values are reported as the mean ± sample standard deviation over three independent runs. AP50 is COCO AP averaged over classes at IoU = 0.50, commonly called mAP50. AP additionally averages over IoU thresholds from 0.50 to 0.95 in steps of 0.05. For DETR models, precision (P) and recall (R) are evaluated at the maximum-F1 operating point of the interpolated IoU-0.50 precision–recall curve; YOLO models retain their native P/R definitions.
 
 | Dataset | Model | P | R | AP50 (mAP50) | AP |
 |---|---|---:|---:|---:|---:|
@@ -100,24 +99,24 @@ python tools/train.py -c configs/local_wtbd_full.yml -r runs/wtbd_full/last.pth 
 | WTBs2025 | Co-Deformable-DETR R18 | 0.7478 ± 0.0054 | 0.6701 ± 0.0083 | 0.6585 ± 0.0038 | 0.4241 ± 0.0054 |
 | WTBs2025 | SFM-DETR | 0.8324 ± 0.0093 | 0.7497 ± 0.0074 | 0.7813 ± 0.0046 | 0.4613 ± 0.0069 |
 
-## 可视化结果
+## Qualitative Results
 
-下图是论文定稿中的代表性样本对比。5×8 网格按“原图、标注、SFM-DETR、RT-DETRv2-R18、Co-Deformable-DETR R18、Position-DETR R18、RT-DETR-R18、YOLOv8-s”排列，样本按 SFM-DETR 表现较好的类别示例选择；它用于定性展示，不代表随机抽样性能估计。
+The following figure shows representative comparisons from the manuscript. The 5 × 8 grid presents, from left to right: original image, ground-truth annotations, SFM-DETR, RT-DETRv2-R18, Co-Deformable-DETR R18, Position-DETR R18, RT-DETR-R18, and YOLOv8-s. These examples were selected to illustrate favorable SFM-DETR detections across defect categories; they are qualitative illustrations rather than a random-sample estimate of performance.
 
-![多模型定性对比](assets/qualitative.png)
+![Qualitative detection comparison across multiple models](assets/qualitative.png)
 
-困难样本和错误分析：
+Challenging examples and error analysis:
 
-![困难样本](assets/hard_examples.png)
+![Detection results on challenging examples](assets/hard_examples.png)
 
-训练曲线与模块归因：
+Training curves and component attribution maps:
 
-![训练曲线](assets/training_curves.png)
+![Precision and AP50 training curves](assets/training_curves.png)
 
-![消融热力图](assets/ablation_heatmaps.png)
+![Grad-CAM heatmaps for the component ablation study](assets/ablation_heatmaps.png)
 
-## 许可与引用
+## License and Citation
 
-RT-DETRv2 上游代码按仓库附带的 Apache License 2.0 发布；上游版权和许可文本保留在 [LICENSE](LICENSE)。SFM-DETR 新增代码和实验配置随本仓库发布，使用前请同时遵守数据集提供方的条款。
+The upstream RT-DETRv2 code is distributed under the Apache License 2.0 included in this repository. Upstream copyright and license notices are preserved in [LICENSE](LICENSE). SFM-DETR additions and experimental configurations are provided with this repository. Use of the datasets is subject to the respective dataset providers' terms.
 
-如果本代码用于研究，请引用论文中的 SFM-DETR 条目，并同时引用 RT-DETR/RT-DETRv2 与所使用数据集论文。
+If you use this code in your research, please cite the SFM-DETR manuscript, the RT-DETR/RT-DETRv2 papers, and the papers associated with the datasets you use.
